@@ -2,6 +2,10 @@
 
 A bookmarking and notes app with server sync. WPF port of the GTK version, built with .NET 9.
 
+## TODO
+
+* [ ] Consider applying to https://signpath.org/apply
+
 ## Prerequisites
 
 1. **Install .NET 9 SDK** from https://dotnet.microsoft.com/download/dotnet/9.0
