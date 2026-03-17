@@ -17,17 +17,44 @@
         </Grid.RowDefinitions>
 
         <!-- Menu Bar -->
-        <Menu Grid.Row="0">
-            <MenuItem Header="_File">
-                <MenuItem Header="_New Save" InputGestureText="Ctrl+N" Click="OnNewSave" />
-                <Separator />
-                <MenuItem Header="_Preferences" InputGestureText="Ctrl+," Click="OnPreferences" />
-                <Separator />
-                <MenuItem Header="_About Save Button" Click="OnAbout" />
-                <Separator />
-                <MenuItem Header="_Quit" InputGestureText="Ctrl+Q" Click="OnQuit" />
-            </MenuItem>
-        </Menu>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Menu Grid.Column="0">
+                <MenuItem Header="_File">
+                    <MenuItem Header="_New Save" InputGestureText="Ctrl+N" Click="OnNewSave" />
+                    <Separator />
+                    <MenuItem Header="_Preferences" InputGestureText="Ctrl+," Click="OnPreferences" />
+                    <Separator />
+                    <MenuItem Header="_About Save Button" Click="OnAbout" />
+                    <Separator />
+                    <MenuItem Header="_Quit" InputGestureText="Ctrl+Q" Click="OnQuit" />
+                </MenuItem>
+            </Menu>
+            <!-- Sync Spinner: 270° arc, 16x16, stroke-based -->
+            <Canvas Grid.Column="1" Width="16" Height="16" Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    x:Name="SyncSpinner" Visibility="Collapsed"
+                    RenderTransformOrigin="0.5,0.5">
+                <Canvas.RenderTransform>
+                    <RotateTransform />
+                </Canvas.RenderTransform>
+                <Path Stroke="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                      StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                    <Path.Data>
+                        <!-- 270° arc: top-center to left-center via right and bottom -->
+                        <PathGeometry>
+                            <PathFigure StartPoint="8,1" IsClosed="False">
+                                <ArcSegment Point="1,8" Size="7,7"
+                                            SweepDirection="Clockwise" IsLargeArc="True" />
+                            </PathFigure>
+                        </PathGeometry>
+                    </Path.Data>
+                </Path>
+            </Canvas>
+        </Grid>
 
         <!-- Main Content -->
         <Grid Grid.Row="1" Margin="20">
@@ -61,7 +88,15 @@
                 <!-- Results List -->
                 <ListBox x:Name="ResultsList" Visibility="Collapsed"
                          BorderThickness="0" Background="Transparent"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         MouseDoubleClick="OnResultActivated"
+                         KeyDown="OnResultsKeyDown">
+
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Border Padding="10,8" Margin="0,2" CornerRadius="6">
@@ -69,24 +104,25 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <!-- Type Icon -->
-                                    <TextBlock Grid.Column="0" Grid.RowSpan="2"
+                                    <TextBlock Grid.Column="0" Grid.RowSpan="3"
                                                Text="{Binding TypeIcon}" FontSize="20"
                                                VerticalAlignment="Center"
                                                Margin="0,0,10,0" />
 
-                                    <!-- Title -->
+                                    <!-- Title (only for files) -->
                                     <TextBlock Grid.Column="1" Grid.Row="0"
                                                Text="{Binding DisplayTitle}"
                                                FontWeight="SemiBold" FontSize="13"
-                                               TextTrimming="CharacterEllipsis" />
+                                               TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding TitleVisibility}" />
 
                                     <!-- Content Preview -->
                                     <TextBlock Grid.Column="1" Grid.Row="1"
@@ -95,11 +131,24 @@
                                                TextTrimming="CharacterEllipsis"
                                                MaxHeight="32" />
 
-                                    <!-- Date -->
-                                    <TextBlock Grid.Column="2" Grid.Row="0"
+                                    <!-- Date: below preview, shown on row hover -->
+                                    <TextBlock Grid.Column="1" Grid.Row="2"
                                                Text="{Binding Date}"
-                                               Foreground="Gray" FontSize="11"
-                                               VerticalAlignment="Top" />
+                                               Foreground="Gray" FontSize="10"
+                                               Margin="0,2,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Hidden" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMouseOver,
+                                                        RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                        Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </Grid>
                             </Border>
                         </DataTemplate>

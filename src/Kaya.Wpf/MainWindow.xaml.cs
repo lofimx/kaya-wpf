@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Kaya.Core.Models;
 using Kaya.Core.Services;
@@ -14,6 +15,7 @@ public class SearchResultViewModel
     public string ContentPreview { get; init; } = "";
     public string Date { get; init; } = "";
     public string TypeIcon { get; init; } = "";
+    public Visibility TitleVisibility { get; init; } = Visibility.Visible;
 }
 
 public partial class MainWindow : Window
@@ -22,8 +24,12 @@ public partial class MainWindow : Window
     private readonly FileService _fileService = new();
     private DispatcherTimer? _searchDebounceTimer;
     private DispatcherTimer? _toastTimer;
+    private Storyboard? _spinnerStoryboard;
+    private bool _wasSyncing;
 
     private const int SearchDebounceMs = 300;
+
+    public SyncManager? SyncManager { get; set; }
 
     public MainWindow()
     {
@@ -41,28 +47,82 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => SearchEntry.Focus()),
             Key.F, ModifierKeys.Control));
 
+        SetupSpinnerAnimation();
+
         Loaded += (_, _) =>
         {
             PerformSearch();
             SearchEntry.Focus();
+            SetupSyncSpinner();
         };
 
-        Console.WriteLine("🔵 INFO EverythingWindow initialized");
+        Logger.Instance.Log("🔵 INFO EverythingWindow initialized");
+    }
+
+    private void SetupSpinnerAnimation()
+    {
+        var animation = new DoubleAnimation
+        {
+            From = 0,
+            To = 360,
+            Duration = new Duration(TimeSpan.FromSeconds(1)),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+
+        _spinnerStoryboard = new Storyboard();
+        _spinnerStoryboard.Children.Add(animation);
+        Storyboard.SetTarget(animation, SyncSpinner);
+        Storyboard.SetTargetProperty(animation,
+            new PropertyPath("(UIElement.RenderTransform).(RotateTransform.Angle)"));
+    }
+
+    private void SetupSyncSpinner()
+    {
+        if (SyncManager is null) return;
+
+        SyncManager.SettingsService.Changed += () =>
+        {
+            Dispatcher.Invoke(UpdateSyncSpinner);
+        };
+
+        // Check current state in case sync already started
+        UpdateSyncSpinner();
+    }
+
+    private void UpdateSyncSpinner()
+    {
+        if (SyncManager is null) return;
+
+        var syncing = SyncManager.SettingsService.SyncInProgress;
+
+        if (syncing)
+        {
+            SyncSpinner.Visibility = Visibility.Visible;
+            _spinnerStoryboard?.Begin();
+        }
+        else
+        {
+            SyncSpinner.Visibility = Visibility.Collapsed;
+            _spinnerStoryboard?.Stop();
+        }
+
+        // Refresh search when sync completes
+        if (_wasSyncing && !syncing)
+            RefreshSearch();
+
+        _wasSyncing = syncing;
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // Auto-focus search entry when typing printable characters without modifiers
         if (SearchEntry.IsFocused) return;
         if (Keyboard.Modifiers != ModifierKeys.None && Keyboard.Modifiers != ModifierKeys.Shift) return;
 
-        // Check if it's a printable character
         if (e.Key >= Key.A && e.Key <= Key.Z ||
             e.Key >= Key.D0 && e.Key <= Key.D9 ||
             e.Key >= Key.NumPad0 && e.Key <= Key.NumPad9)
         {
             SearchEntry.Focus();
-            // Don't mark as handled — let the character pass through to the TextBox
         }
     }
 
@@ -111,7 +171,9 @@ public partial class MainWindow : Window
             DisplayTitle = r.DisplayTitle,
             ContentPreview = r.ContentPreview,
             Date = r.Date,
-            TypeIcon = TypeIconFor(r.Type)
+            TypeIcon = TypeIconFor(r.Type),
+            TitleVisibility = SearchResultFactory.IsTitleVisible(r.Type)
+                ? Visibility.Visible : Visibility.Collapsed
         }).ToList();
     }
 
@@ -127,7 +189,48 @@ public partial class MainWindow : Window
     {
         _searchService.InvalidateCache();
         PerformSearch();
-        Console.WriteLine("🔵 INFO Search refreshed");
+        Logger.Instance.Log("🔵 INFO Search refreshed");
+    }
+
+    private void OnResultActivated(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        ActivateSelectedResult();
+    }
+
+    private void OnResultsKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            ActivateSelectedResult();
+            e.Handled = true;
+        }
+    }
+
+    private void ActivateSelectedResult()
+    {
+        if (ResultsList.SelectedItem is not SearchResultViewModel vm) return;
+
+        var results = _searchService.Search(SearchEntry.Text.Trim());
+        var result = results.FirstOrDefault(r => r.Filename == vm.Filename);
+        if (result is null) return;
+
+        OpenPreview(result);
+    }
+
+    private void OpenPreview(SearchResult result)
+    {
+        if (SyncManager is null) return;
+
+        var previewWindow = new PreviewWindow(result,
+            SyncManager.SettingsService,
+            new CredentialService())
+        {
+            Owner = this,
+            OnSaveComplete = RefreshSearch
+        };
+        previewWindow.ShowDialog();
+
+        Logger.Instance.Log($"🔵 INFO Opening preview for \"{result.Filename}\"");
     }
 
     private void OnNewSave(object sender, RoutedEventArgs e)
@@ -135,14 +238,24 @@ public partial class MainWindow : Window
         var newSaveWindow = new NewSaveWindow
         {
             Owner = this,
-            OnSaveComplete = RefreshSearch
+            OnSaveComplete = () =>
+            {
+                RefreshSearch();
+                // Trigger immediate sync
+                SyncManager?.TriggerSync();
+            }
         };
         newSaveWindow.ShowDialog();
     }
 
     private void OnPreferences(object sender, RoutedEventArgs e)
     {
-        var prefs = new PreferencesWindow { Owner = this };
+        if (SyncManager is null) return;
+
+        var prefs = new PreferencesWindow(SyncManager.SettingsService, new CredentialService())
+        {
+            Owner = this
+        };
         prefs.ShowDialog();
     }
 

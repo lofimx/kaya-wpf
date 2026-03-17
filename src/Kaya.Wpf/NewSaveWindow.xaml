@@ -47,7 +47,9 @@
                         <TextBox x:Name="TagsEntry" BorderThickness="0" MinWidth="80"
                                  Background="Transparent" VerticalAlignment="Center"
                                  Margin="2" KeyDown="OnTagsKeyDown"
-                                 PreviewKeyDown="OnTagsPreviewKeyDown" />
+                                 PreviewKeyDown="OnTagsPreviewKeyDown"
+                                 AllowDrop="True" PreviewDragOver="OnFieldDragOver"
+                                 PreviewDrop="OnFieldDrop" />
                     </WrapPanel>
                 </ScrollViewer>
             </Border>
@@ -56,7 +58,9 @@
             <TextBlock Grid.Row="4" Text="Note (optional)" Margin="0,0,0,5" />
             <TextBox Grid.Row="5" x:Name="NoteText" AcceptsReturn="True"
                      TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                     MinHeight="80" />
+                     MinHeight="80"
+                     AllowDrop="True" PreviewDragOver="OnFieldDragOver"
+                     PreviewDrop="OnFieldDrop" />
         </Grid>
 
         <!-- File Preview (hidden by default) -->

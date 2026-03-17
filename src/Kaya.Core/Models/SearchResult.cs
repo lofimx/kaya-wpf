@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace Kaya.Core.Models;
 
 public enum AngaType
@@ -18,52 +16,29 @@ public record SearchResult(
     string RawTimestamp
 );
 
-public static partial class SearchResultFactory
+public static class SearchResultFactory
 {
-    private static readonly Regex TimestampPrefixRegex = GenerateTimestampPrefixRegex();
-    private static readonly Regex TimestampExtractRegex = GenerateTimestampExtractRegex();
-    private static readonly Regex RawTimestampRegex = GenerateRawTimestampRegex();
-
-    [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}T\d{6}(?:_\d{9})?-")]
-    private static partial Regex GenerateTimestampPrefixRegex();
-
-    [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2})T(\d{6})")]
-    private static partial Regex GenerateTimestampExtractRegex();
-
-    [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2}T\d{6}(?:_\d{9})?)")]
-    private static partial Regex GenerateRawTimestampRegex();
-
     public static SearchResult FromFile(string filename, string contents)
     {
-        var type = DetermineType(filename);
+        var file = new Filename(filename);
         return new SearchResult(
             filename,
-            type,
-            ExtractDisplayTitle(filename),
-            ExtractContentPreview(type, contents),
-            ExtractDate(filename),
-            ExtractRawTimestamp(filename)
+            file.AngaType,
+            file.DisplayTitle,
+            ExtractContentPreview(file.AngaType, contents),
+            file.Date,
+            file.RawTimestamp
         );
     }
 
-    public static AngaType DetermineType(string filename)
-    {
-        var ext = filename.Split('.').LastOrDefault()?.ToLowerInvariant() ?? "";
-        return ext switch
-        {
-            "url" => AngaType.Bookmark,
-            "md" => AngaType.Note,
-            _ => AngaType.File
-        };
-    }
+    public static AngaType DetermineType(string filename) =>
+        new Filename(filename).AngaType;
 
-    public static string ExtractDisplayTitle(string filename)
-    {
-        var withoutTimestamp = TimestampPrefixRegex.Replace(filename, "");
-        var lastDot = withoutTimestamp.LastIndexOf('.');
-        var withoutExtension = lastDot > 0 ? withoutTimestamp[..lastDot] : withoutTimestamp;
-        return withoutExtension.Replace('-', ' ');
-    }
+    public static bool IsTitleVisible(AngaType type) =>
+        type == AngaType.File;
+
+    public static string ExtractDisplayTitle(string filename) =>
+        new Filename(filename).DisplayTitle;
 
     public static string ExtractContentPreview(AngaType type, string contents)
     {
@@ -81,17 +56,11 @@ public static partial class SearchResultFactory
         return "";
     }
 
-    public static string ExtractDate(string filename)
-    {
-        var match = TimestampExtractRegex.Match(filename);
-        return match.Success ? match.Groups[1].Value : "";
-    }
+    public static string ExtractDate(string filename) =>
+        new Filename(filename).Date;
 
-    public static string ExtractRawTimestamp(string filename)
-    {
-        var match = RawTimestampRegex.Match(filename);
-        return match.Success ? match.Groups[1].Value : "";
-    }
+    public static string ExtractRawTimestamp(string filename) =>
+        new Filename(filename).RawTimestamp;
 
     public static bool MatchesQuery(SearchResult result, string query)
     {

@@ -29,7 +29,7 @@ public class SearchService
         results.Sort((a, b) => string.Compare(b.RawTimestamp, a.RawTimestamp, StringComparison.Ordinal));
 
         _cache = results;
-        Console.WriteLine($"🔵 INFO SearchService loaded {results.Count} anga files");
+        Logger.Instance.Log($"🔵 INFO SearchService loaded {results.Count} anga files");
         return results;
     }
 
@@ -45,7 +45,7 @@ public class SearchService
     public void InvalidateCache()
     {
         _cache = null;
-        Console.WriteLine("🟢 DEBUG SearchService cache invalidated");
+        Logger.Instance.Log("🟢 DEBUG SearchService cache invalidated");
     }
 
     private static List<string> ListAngaFiles()
@@ -73,7 +73,7 @@ public class SearchService
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"🔴 ERROR SearchService failed to read {filename}: {e.Message}");
+            Logger.Instance.Error($"🔴 ERROR SearchService failed to read {filename}: {e.Message}");
             return "";
         }
     }

@@ -45,9 +45,9 @@ public class SearchResultTests
         }
 
         [Fact]
-        public void Should_handle_filenames_with_multiple_dots()
+        public void Should_preserve_hyphens_and_extension_for_files()
         {
-            Assert.Equal("my file.tar",
+            Assert.Equal("my-file.tar.gz",
                 SearchResultFactory.ExtractDisplayTitle("2025-06-28T120000-my-file.tar.gz"));
         }
     }

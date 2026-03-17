@@ -33,6 +33,13 @@ This file will get large, over time, so only prioritize reading through it if yo
 * plain WPF
 * Fluent theme with `ThemeMode="System"` for dark/light switching
 * passwords: Windows Credential Manager
+* unit tests in xUnit
+
+---
+
+## Testing
+
+Unit tests should be written for all new features and bug fixes. Prefer test-driving code (Red => Green => Refactor). Prefer code in models rather than services, since it's more testable. Extract code into models whenever possible to reduce duplication.
 
 ---
 

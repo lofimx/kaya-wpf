@@ -57,6 +57,10 @@ public class SyncService
             var email = _settingsService.Email;
             var authHeader = CreateAuthHeader(email, password);
 
+            // Ensure directories exist
+            Directory.CreateDirectory(LocalAngaDir);
+            Directory.CreateDirectory(LocalMetaDir);
+
             // Sync anga
             var serverFiles = await FetchFileList(baseUrl, email, "anga", authHeader);
             var localFiles = FetchLocalFiles(LocalAngaDir);
@@ -160,19 +164,21 @@ public class SyncService
         var serverWords = await FetchFileList(baseUrl, email, "words", authHeader);
         var localWords = FetchLocalDirectories(LocalWordsDir);
 
-        var wordsToDownload = serverWords.Except(localWords).ToList();
-        var existingWords = localWords.Intersect(serverWords).ToList();
+        Logger.Instance.Log($"🔵 INFO Words - Server: {serverWords.Count}, Local: {localWords.Count}");
 
-        // Download new words
+        // If counts match, skip — no new words to download
+        if (serverWords.Count == localWords.Count)
+        {
+            Logger.Instance.Log("🟢 DEBUG Words counts match, skipping words sync");
+            return;
+        }
+
+        var wordsToDownload = serverWords.Except(localWords).ToList();
+        Logger.Instance.Log($"🔵 INFO Words - Download: {wordsToDownload.Count}");
+
         foreach (var word in wordsToDownload)
         {
             await DownloadWord(baseUrl, email, word, authHeader, result);
-        }
-
-        // Sync existing words (download missing files)
-        foreach (var word in existingWords)
-        {
-            await SyncExistingWord(baseUrl, email, word, authHeader, result);
         }
     }
 
@@ -184,28 +190,6 @@ public class SyncService
 
         var serverFiles = await FetchFileList(baseUrl, email, $"words/{Uri.EscapeDataString(word)}", authHeader);
         foreach (var filename in serverFiles)
-        {
-            try
-            {
-                await DownloadFile(baseUrl, email, $"words/{Uri.EscapeDataString(word)}", filename, wordDir, authHeader);
-                result.Downloaded.Add($"{word}/{filename}");
-            }
-            catch (Exception e)
-            {
-                result.Errors.Add(new SyncError($"{word}/{filename}", "download", e.Message));
-            }
-        }
-    }
-
-    private async Task SyncExistingWord(string baseUrl, string email, string word,
-        AuthenticationHeaderValue authHeader, SyncResult result)
-    {
-        var wordDir = Path.Combine(LocalWordsDir, word);
-        var serverFiles = await FetchFileList(baseUrl, email, $"words/{Uri.EscapeDataString(word)}", authHeader);
-        var localFiles = FetchLocalFiles(wordDir);
-
-        var toDownload = serverFiles.Except(localFiles).ToList();
-        foreach (var filename in toDownload)
         {
             try
             {

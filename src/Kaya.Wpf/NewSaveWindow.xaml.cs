@@ -5,6 +5,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Windows.Data.Pdf;
+using Windows.Storage;
 using Kaya.Core.Models;
 using Kaya.Core.Services;
 using Microsoft.Win32;
@@ -30,7 +32,7 @@ public partial class NewSaveWindow : Window
         _fileService.EnsureKayaDirectories();
 
         Loaded += (_, _) => AngaText.Focus();
-        Console.WriteLine("🔵 INFO NewSaveWindow initialized");
+        Logger.Instance.Log("🔵 INFO NewSaveWindow initialized");
     }
 
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
@@ -98,7 +100,7 @@ public partial class NewSaveWindow : Window
         // Insert pill before the TextBox entry
         var entryIndex = TagsPanel.Children.IndexOf(TagsEntry);
         TagsPanel.Children.Insert(entryIndex, pill);
-        Console.WriteLine($"🟢 DEBUG Tag added: \"{tagText}\"");
+        Logger.Instance.Log($"🟢 DEBUG Tag added: \"{tagText}\"");
     }
 
     private void RemoveLastTag()
@@ -114,7 +116,7 @@ public partial class NewSaveWindow : Window
         {
             TagsPanel.Children.RemoveAt(entryIndex - 1);
         }
-        Console.WriteLine($"🟢 DEBUG Tag removed: \"{removed}\"");
+        Logger.Instance.Log($"🟢 DEBUG Tag removed: \"{removed}\"");
     }
 
     private void OnWindowDragEnter(object sender, DragEventArgs e)
@@ -173,12 +175,12 @@ public partial class NewSaveWindow : Window
             _droppedFileName = Path.GetFileName(filePath);
             _droppedFileContents = File.ReadAllBytes(filePath);
             ShowFilePreview(_droppedFileName, filePath);
-            Console.WriteLine($"🔵 INFO File selected: \"{_droppedFileName}\"");
+            Logger.Instance.Log($"🔵 INFO File selected: \"{_droppedFileName}\"");
         }
         catch (Exception ex)
         {
             ShowToast($"Failed to read file: {ex.Message}", isError: true);
-            Console.Error.WriteLine($"🔴 ERROR Failed to read file: {ex.Message}");
+            Logger.Instance.Error($"🔴 ERROR Failed to read file: {ex.Message}");
         }
     }
 
@@ -186,43 +188,20 @@ public partial class NewSaveWindow : Window
     {
         FilePreviewName.Text = filename;
 
-        // Try to show image preview
         var ext = Path.GetExtension(filename).ToLowerInvariant();
-        var imageExtensions = new HashSet<string> { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp" };
+        var rasterImageExtensions = new HashSet<string> { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp" };
 
-        if (imageExtensions.Contains(ext))
+        if (rasterImageExtensions.Contains(ext))
         {
-            try
-            {
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(filePath);
-                bitmap.DecodePixelWidth = 256;
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.EndInit();
-
-                FilePreviewIcon.Visibility = Visibility.Collapsed;
-
-                // Check if there's already an Image control, remove it
-                var existingImage = FilePreviewContent.Children.OfType<Image>().FirstOrDefault();
-                if (existingImage != null)
-                    FilePreviewContent.Children.Remove(existingImage);
-
-                var image = new Image
-                {
-                    Source = bitmap,
-                    MaxWidth = 256,
-                    MaxHeight = 256,
-                    Stretch = Stretch.Uniform,
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-                FilePreviewContent.Children.Insert(0, image);
-            }
-            catch
-            {
-                FilePreviewIcon.Visibility = Visibility.Visible;
-                FilePreviewIcon.Text = "\U0001F5BC"; // framed picture emoji
-            }
+            ShowRasterImagePreview(filePath);
+        }
+        else if (ext == ".svg")
+        {
+            ShowSvgPreview(filePath);
+        }
+        else if (ext == ".pdf")
+        {
+            _ = ShowPdfPreviewAsync(filePath);
         }
         else
         {
@@ -232,6 +211,114 @@ public partial class NewSaveWindow : Window
 
         FormPanel.Visibility = Visibility.Collapsed;
         FilePreviewPanel.Visibility = Visibility.Visible;
+    }
+
+    private void ShowRasterImagePreview(string filePath)
+    {
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(filePath);
+            bitmap.DecodePixelWidth = 256;
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+
+            InsertImagePreview(bitmap);
+        }
+        catch
+        {
+            FilePreviewIcon.Visibility = Visibility.Visible;
+            FilePreviewIcon.Text = "\U0001F5BC"; // framed picture emoji
+        }
+    }
+
+    private void ShowSvgPreview(string filePath)
+    {
+        try
+        {
+            // WPF cannot natively decode SVG into BitmapImage.
+            // Use XamlReader to parse simple SVGs as XAML Viewbox content.
+            // For complex SVGs this may fail, falling back to a file icon.
+            var svgContent = File.ReadAllText(filePath);
+
+            // Wrap SVG in a WebBrowser for reliable rendering
+            var webBrowser = new WebBrowser
+            {
+                MaxWidth = 256,
+                MaxHeight = 256,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            webBrowser.NavigateToString(
+                $"<html><body style='margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:transparent'>{svgContent}</body></html>");
+
+            FilePreviewIcon.Visibility = Visibility.Collapsed;
+
+            var existingBrowser = FilePreviewContent.Children.OfType<WebBrowser>().FirstOrDefault();
+            if (existingBrowser != null)
+                FilePreviewContent.Children.Remove(existingBrowser);
+            var existingImage = FilePreviewContent.Children.OfType<Image>().FirstOrDefault();
+            if (existingImage != null)
+                FilePreviewContent.Children.Remove(existingImage);
+
+            FilePreviewContent.Children.Insert(0, webBrowser);
+        }
+        catch (Exception e)
+        {
+            Logger.Instance.Error($"🔴 ERROR NewSaveWindow SVG preview failed: {e.Message}");
+            FilePreviewIcon.Visibility = Visibility.Visible;
+            FilePreviewIcon.Text = "\U0001F5BC";
+        }
+    }
+
+    private async Task ShowPdfPreviewAsync(string filePath)
+    {
+        try
+        {
+            var storageFile = await StorageFile.GetFileFromPathAsync(filePath);
+            var pdfDocument = await PdfDocument.LoadFromFileAsync(storageFile);
+
+            using var page = pdfDocument.GetPage(0);
+            using var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+            await page.RenderToStreamAsync(stream);
+
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.StreamSource = stream.AsStream();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            InsertImagePreview(bitmap);
+        }
+        catch (Exception e)
+        {
+            Logger.Instance.Error($"🔴 ERROR NewSaveWindow PDF preview failed: {e.Message}");
+            FilePreviewIcon.Visibility = Visibility.Visible;
+            FilePreviewIcon.Text = "\U0001F4C4";
+        }
+    }
+
+    private void InsertImagePreview(BitmapImage bitmap)
+    {
+        FilePreviewIcon.Visibility = Visibility.Collapsed;
+
+        var existingImage = FilePreviewContent.Children.OfType<Image>().FirstOrDefault();
+        if (existingImage != null)
+            FilePreviewContent.Children.Remove(existingImage);
+        var existingBrowser = FilePreviewContent.Children.OfType<WebBrowser>().FirstOrDefault();
+        if (existingBrowser != null)
+            FilePreviewContent.Children.Remove(existingBrowser);
+
+        var image = new Image
+        {
+            Source = bitmap,
+            MaxWidth = 256,
+            MaxHeight = 256,
+            Stretch = Stretch.Uniform,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        FilePreviewContent.Children.Insert(0, image);
     }
 
     private void OnRemoveFile(object sender, RoutedEventArgs e)
@@ -247,7 +334,27 @@ public partial class NewSaveWindow : Window
 
         FilePreviewPanel.Visibility = Visibility.Collapsed;
         FormPanel.Visibility = Visibility.Visible;
-        Console.WriteLine("🔵 INFO File removed from New Save");
+        Logger.Instance.Log("🔵 INFO File removed from New Save");
+    }
+
+    private void OnFieldDragOver(object sender, DragEventArgs e)
+    {
+        // If it's a file drop, pass it up to the window
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+    }
+
+    private void OnFieldDrop(object sender, DragEventArgs e)
+    {
+        // Pass file drops to the window handler
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            OnWindowDrop(sender, e);
+            e.Handled = true;
+        }
     }
 
     private void OnCancel(object sender, RoutedEventArgs e)
@@ -257,7 +364,7 @@ public partial class NewSaveWindow : Window
 
     private void OnSave(object sender, RoutedEventArgs e)
     {
-        Console.WriteLine("🔵 INFO NewSaveWindow on_save fired");
+        Logger.Instance.Log("🔵 INFO NewSaveWindow on_save fired");
 
         try
         {
@@ -307,7 +414,7 @@ public partial class NewSaveWindow : Window
         catch (Exception ex)
         {
             ShowToast($"Error: {ex.Message}", isError: true);
-            Console.Error.WriteLine($"🔴 ERROR Failed to save: {ex.Message}");
+            Logger.Instance.Error($"🔴 ERROR Failed to save: {ex.Message}");
         }
     }
 

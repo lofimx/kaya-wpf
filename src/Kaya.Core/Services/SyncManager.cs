@@ -16,6 +16,7 @@ public class SyncManager : IDisposable
     }
 
     public SyncService SyncService => _syncService;
+    public SettingsService SettingsService => _settingsService;
 
     public void Start()
     {
@@ -36,10 +37,21 @@ public class SyncManager : IDisposable
         _timer = null;
     }
 
+    public async void TriggerSync()
+    {
+        await RunSyncAsync();
+    }
+
     private async void RunSync()
+    {
+        await RunSyncAsync();
+    }
+
+    private async Task RunSyncAsync()
     {
         if (!_settingsService.ShouldSync()) return;
 
+        _settingsService.SyncInProgress = true;
         try
         {
             var result = await _syncService.SyncAsync();
@@ -57,6 +69,10 @@ public class SyncManager : IDisposable
         catch (Exception e)
         {
             _settingsService.LastSyncError = e.Message;
+        }
+        finally
+        {
+            _settingsService.SyncInProgress = false;
         }
     }
 

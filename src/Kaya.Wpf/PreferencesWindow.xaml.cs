@@ -1,118 +1,181 @@
 using System.Windows;
+using System.Windows.Threading;
 using Kaya.Core.Services;
 
 namespace Kaya.Wpf;
 
 public partial class PreferencesWindow : Window
 {
-    private readonly SettingsService _settingsService = new();
-    private readonly CredentialService _credentialService = new();
-    private bool _isLoading = true;
+    private readonly SettingsService _settingsService;
+    private readonly CredentialService _credentialService;
+    private readonly SyncService _syncService;
 
-    public PreferencesWindow()
+    public PreferencesWindow(SettingsService settingsService, CredentialService credentialService)
     {
         InitializeComponent();
         this.ApplyDarkTitleBar();
+
+        _settingsService = settingsService;
+        _credentialService = credentialService;
+        _syncService = new SyncService(settingsService, credentialService);
+
         LoadSettings();
-        _isLoading = false;
-        UpdateStatus();
+
+        _settingsService.Changed += OnSettingsChanged;
+        Closed += (_, _) => _settingsService.Changed -= OnSettingsChanged;
+    }
+
+    private void OnSettingsChanged()
+    {
+        Dispatcher.Invoke(UpdateStatus);
     }
 
     private void LoadSettings()
     {
         ServerUrlEntry.Text = _settingsService.ServerUrl;
         EmailEntry.Text = _settingsService.Email;
+        NativeHostPortEntry.Text = _settingsService.NativeHostPort.ToString();
 
         var password = _credentialService.GetPassword();
         if (!string.IsNullOrEmpty(password))
             PasswordEntry.Password = password;
-    }
 
-    private void OnSettingsChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (_isLoading) return;
-
-        _settingsService.ServerUrl = ServerUrlEntry.Text.Trim();
-        _settingsService.Email = EmailEntry.Text.Trim();
         UpdateStatus();
     }
 
-    private void OnPasswordChanged(object sender, RoutedEventArgs e)
+    private void OnSaveCredentials(object sender, RoutedEventArgs e)
     {
-        if (_isLoading) return;
-
+        var serverUrl = ServerUrlEntry.Text.Trim();
+        var email = EmailEntry.Text.Trim();
         var password = PasswordEntry.Password;
-        if (string.IsNullOrEmpty(password))
-            _credentialService.ClearPassword();
-        else
-            _credentialService.SetPassword(password);
+
+        if (string.IsNullOrEmpty(serverUrl))
+        {
+            SyncStatusText.Text = "Enter a server URL";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        {
+            SyncStatusText.Text = "Enter both email and password";
+            return;
+        }
+
+        _settingsService.ServerUrl = serverUrl;
+        _settingsService.Email = email;
+        _credentialService.SetPassword(password);
+        _settingsService.SyncEnabled = true;
 
         UpdateStatus();
+        Logger.Instance.Log("🔵 INFO PreferencesWindow credentials saved");
+    }
+
+    private void OnClearCredentials(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            "Are you sure you want to clear your email and password?",
+            "Clear Credentials?",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes) return;
+
+        _settingsService.SyncEnabled = false;
+        _settingsService.Email = "";
+        _credentialService.ClearPassword();
+
+        EmailEntry.Text = "";
+        PasswordEntry.Password = "";
+
+        UpdateStatus();
+        Logger.Instance.Log("🔵 INFO PreferencesWindow credentials cleared");
     }
 
     private async void OnForceSync(object sender, RoutedEventArgs e)
     {
+        if (!_settingsService.ShouldSync()) return;
+
         ForceSyncButton.IsEnabled = false;
-        SyncStatusText.Text = "Syncing...";
+        SyncStatusText.Text = "Syncing\u2026";
+        _settingsService.SyncInProgress = true;
 
         try
         {
-            var syncService = new SyncService(_settingsService, _credentialService);
-            var result = await syncService.SyncAsync();
+            var syncResult = await _syncService.SyncAsync();
 
-            if (result.Errors.Count > 0)
+            if (syncResult.Errors.Count > 0)
             {
-                var errorMsg = string.Join("\n", result.Errors.Select(err => $"{err.Operation} {err.File}: {err.Error}"));
-                SyncStatusText.Text = $"Sync completed with errors:\n{errorMsg}";
+                var errorMsg = string.Join("\n",
+                    syncResult.Errors.Select(err => $"{err.Operation} {err.File}: {err.Error}"));
+                _settingsService.LastSyncError = errorMsg;
             }
             else
             {
-                _settingsService.LastSyncSuccess = DateTimeOffset.UtcNow.ToString("o");
                 _settingsService.LastSyncError = "";
-                UpdateStatus();
+                _settingsService.LastSyncSuccess = DateTimeOffset.UtcNow.ToString("o");
             }
+
+            UpdateStatus();
         }
         catch (Exception ex)
         {
-            SyncStatusText.Text = $"Sync failed: {ex.Message}";
+            _settingsService.LastSyncError = ex.Message;
+            UpdateStatus();
         }
         finally
         {
+            _settingsService.SyncInProgress = false;
             ForceSyncButton.IsEnabled = true;
         }
     }
 
     private void UpdateStatus()
     {
+        if (_settingsService.SyncInProgress)
+        {
+            SyncStatusText.Text = "Syncing\u2026";
+            ForceSyncButton.IsEnabled = false;
+            return;
+        }
+
+        ForceSyncButton.IsEnabled = true;
+
+        if (!_settingsService.ShouldSync())
+        {
+            SyncStatusText.Text = "Not configured";
+            return;
+        }
+
         var lastError = _settingsService.LastSyncError;
+        var lastSuccess = _settingsService.LastSyncSuccess;
+
         if (!string.IsNullOrEmpty(lastError))
         {
             SyncStatusText.Text = $"Error: {lastError}";
-            return;
         }
-
-        if (!_settingsService.IsCustomServerConfigured())
-        {
-            SyncStatusText.Text = "Sync disabled (default server not yet available)";
-            return;
-        }
-
-        if (string.IsNullOrEmpty(_settingsService.Email) || string.IsNullOrEmpty(_credentialService.GetPassword()))
-        {
-            SyncStatusText.Text = "Not configured \u2014 enter email and password";
-            return;
-        }
-
-        var lastSuccess = _settingsService.LastSyncSuccess;
-        if (!string.IsNullOrEmpty(lastSuccess))
+        else if (!string.IsNullOrEmpty(lastSuccess))
         {
             if (DateTimeOffset.TryParse(lastSuccess, out var dt))
                 SyncStatusText.Text = $"Last sync: {dt.ToLocalTime():g}";
             else
                 SyncStatusText.Text = $"Last sync: {lastSuccess}";
-            return;
         }
+        else
+        {
+            SyncStatusText.Text = $"Ready to sync with {_settingsService.ServerUrl}";
+        }
+    }
 
-        SyncStatusText.Text = $"Ready to sync with {_settingsService.ServerUrl}";
+    private void OnSaveNativeHostPort(object sender, RoutedEventArgs e)
+    {
+        if (int.TryParse(NativeHostPortEntry.Text.Trim(), out var port) && port is > 0 and <= 65535)
+        {
+            _settingsService.NativeHostPort = port;
+            Logger.Instance.Log($"🔵 INFO PreferencesWindow native host port changed to {port}");
+        }
+        else
+        {
+            NativeHostPortEntry.Text = _settingsService.NativeHostPort.ToString();
+        }
     }
 }

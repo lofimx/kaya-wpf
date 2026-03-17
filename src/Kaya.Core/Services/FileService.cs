@@ -35,6 +35,23 @@ public class FileService
         File.WriteAllText(filePath, metaFile.Contents);
     }
 
+    public string ReadAngaContents(string filename)
+    {
+        var filePath = Path.Combine(AngaDir, filename);
+        return File.ReadAllText(filePath);
+    }
+
+    public byte[] ReadAngaBytes(string filename)
+    {
+        var filePath = Path.Combine(AngaDir, filename);
+        return File.ReadAllBytes(filePath);
+    }
+
+    public string GetAngaFilePath(string filename)
+    {
+        return Path.Combine(AngaDir, filename);
+    }
+
     private static string GetSafeFilepath(string directory, string filename, string filenameWithNanos)
     {
         var path = Path.Combine(directory, filename);

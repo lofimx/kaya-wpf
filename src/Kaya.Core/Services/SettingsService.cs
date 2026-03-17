@@ -47,14 +47,30 @@ public class SettingsService
         set { _data.LastSyncSuccess = value; Save(); Changed?.Invoke(); }
     }
 
-    public bool IsCustomServerConfigured()
+    public const int DefaultNativeHostPort = 21420;
+
+    public int NativeHostPort
     {
-        return ServerUrl != DefaultServerUrl && ServerUrl.Length > 0;
+        get => _data.NativeHostPort ?? DefaultNativeHostPort;
+        set { _data.NativeHostPort = value; Save(); Changed?.Invoke(); }
+    }
+
+    private bool _syncInProgress;
+
+    public bool SyncInProgress
+    {
+        get => _syncInProgress;
+        set { _syncInProgress = value; Changed?.Invoke(); }
     }
 
     public bool ShouldSync()
     {
-        return IsCustomServerConfigured() && !string.IsNullOrEmpty(Email);
+        return SyncEnabled;
+    }
+
+    public bool IsCustomServerConfigured()
+    {
+        return ServerUrl != DefaultServerUrl && ServerUrl.Length > 0;
     }
 
     private SettingsData Load()
@@ -81,5 +97,6 @@ public class SettingsService
         public bool SyncEnabled { get; set; }
         public string? LastSyncError { get; set; }
         public string? LastSyncSuccess { get; set; }
+        public int? NativeHostPort { get; set; }
     }
 }
