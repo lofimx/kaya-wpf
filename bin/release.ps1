@@ -11,16 +11,12 @@ $Root = Split-Path -Parent $PSScriptRoot
 
 function Run-Git {
     param([string]$Command)
-    $prevPref = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    $output = Invoke-Expression "git -C `"$Root`" $Command 2>&1" | Out-String
-    $exitCode = $LASTEXITCODE
-    $ErrorActionPreference = $prevPref
-    if ($exitCode -ne 0) {
-        Write-Error "Command failed: git $Command`n$output"
+    $output = cmd /c "git -C `"$Root`" $Command 2>&1"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Command failed: git $Command`n$($output -join "`n")"
         exit 1
     }
-    return $output.Trim()
+    return ($output -join "`n").Trim()
 }
 
 function Confirm-Prompt {
