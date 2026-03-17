@@ -11,8 +11,12 @@ $Root = Split-Path -Parent $PSScriptRoot
 
 function Run-Git {
     param([string]$Command)
+    $prevPref = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     $output = Invoke-Expression "git -C `"$Root`" $Command 2>&1" | Out-String
-    if ($LASTEXITCODE -ne 0) {
+    $exitCode = $LASTEXITCODE
+    $ErrorActionPreference = $prevPref
+    if ($exitCode -ne 0) {
         Write-Error "Command failed: git $Command`n$output"
         exit 1
     }
@@ -34,11 +38,11 @@ Write-Host ""
 Write-Host "=== Step 1: Determine new version ==="
 Write-Host ""
 
-$allTags = (Run-Git "tag --sort=-v:refname") -split "`n" |
+$allTags = @((Run-Git "tag --sort=-v:refname") -split "`n" |
     ForEach-Object { $_.Trim() } |
-    Where-Object { $_ -match "^v\d+\.\d+\.\d+$" }
+    Where-Object { $_ -match "^v\d+\.\d+\.\d+$" })
 
-if (-not $allTags -or $allTags.Count -eq 0) {
+if ($allTags.Count -eq 0) {
     $newVersion = Read-Host "No version tags found. Initial version (e.g. 0.1.0)"
 } else {
     $currentTag = $allTags[0]
