@@ -70,3 +70,7 @@ When PDFs and SVGs are opened (or drag/dropped) in the "New Save" window, they s
 Read [@PLAN.md](file:///C:/Users/steven/work/kaya-wpf/doc/plan/PLAN.md).
 
 Using GitHub Actions, create a workflow similar to the `kaya-gtk` GHA build workflows that create Linux and MacOS artifacts. Produce an `.exe` as output, bundled in an `.msi` installer.
+
+### Create a Release script
+
+Similar to the `bin/release.rb` script available in `kaya-gtk`, create a release script for `kaya-wpf`. There is no `ruby` available in Git Bash on Windows, and it might be better not to mix Git Bash and MSYS2, so perhaps it's better to port the Ruby script to PowerShell? The PowerShell shell has git available, and the script is fairly simple. Alternative suggestions welcome; we want to reduce maintenance burden and duplicated code (especially in multiple languages) but we've already ported TypeScript GTK to C#/WPF. This is fairly minor by comparison.
