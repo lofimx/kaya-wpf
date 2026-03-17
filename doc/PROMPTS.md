@@ -64,3 +64,9 @@ The browser extension found at [@kaya-wxt](file:///C:/Users/steven/work/kaya-wxt
 ### BUG: PDF and SVG rendering on "New Save" window
 
 When PDFs and SVGs are opened (or drag/dropped) in the "New Save" window, they should render so the user can see a preview. PDFs only need to show the first page. SVGs should scale to the viewport, as other images do.
+
+## Create Windows `.msi` on CI build
+
+Read [@PLAN.md](file:///C:/Users/steven/work/kaya-wpf/doc/plan/PLAN.md).
+
+Using GitHub Actions, create a workflow similar to the `kaya-gtk` GHA build workflows that create Linux and MacOS artifacts. Produce an `.exe` as output, bundled in an `.msi` installer.
