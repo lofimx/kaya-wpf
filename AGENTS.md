@@ -1,22 +1,18 @@
-# Kaya Developer Guide for AI Assistants
+# Kaya WPF Developer Guide for AI Assistants
 
-This document provides guidance for AI assistants working on the Kaya Server codebase. Kaya is a very simple, immutable, local-first-friendly note-taking and bookmarking platform. It includes a web service and web app, browser extensions, iOS and Android mobile apps, and desktop apps.
-
-This is the repo for the desktop apps. A TypeScript GTK app is used for Linux and MacOS. A WPF port of the GTK app is used for Windows.
+This document provides guidance for AI assistants working on the Kaya WPF codebase. Kaya is a very simple, immutable, local-first-friendly note-taking and bookmarking platform. This is the WPF port of the GTK desktop app, targeting Windows with .NET 9.
 
 The app allows users to store, search, and sync their notes and bookmarks.
 
 ## Planning
 
-Read [gtk/doc/plan/PLAN.md](./gtk/doc/plan/PLAN.md) and follow those instructions for creating a plan before any work is performed.
-
-When porting GTK features/bugfixes to WPF, read [wpf/doc/plan/PLAN.md](./wpf/doc/plan/PLAN.md) and follow those instructions for creating a plan before performing any work, instead.
+Read [doc/plan/PLAN.md](./doc/plan/PLAN.md) and follow those instructions for creating a plan before any work is performed.
 
 ---
 
 ## Prompt History
 
-You can find a chronological list of significant past prompts in [@PROMPTS.md](./gtk/doc/PROMPTS.md) (and [@PROMPTS.md](./wpf/doc/PROMPTS.md) for WPF port). Major prompts are titled with Subheading Level Two (\#\#), sub-prompts are titled with Subheading Level Three (\#\#\#).
+You can find a chronological list of significant past prompts in [doc/PROMPTS.md](./doc/PROMPTS.md). Major prompts are titled with Subheading Level Two (\#\#), sub-prompts are titled with Subheading Level Three (\#\#\#).
 
 The current major prompt or bugfix will probably also be in this file, uncommitted.
 
@@ -26,27 +22,17 @@ This file will get large, over time, so only prioritize reading through it if yo
 
 ## Essential Commands
 
-* Linux or MacOS: `make {lint|test|build|run|macos-build|macos-run}`
 * `dotnet {build|test|run}`
+* `.\build.ps1 {build|test|run|clean|publish}`
 
 ---
 
 ## Codebase Overview
 
-**GTK**
-
-* GTK4
-* Libadwaita
-* passwords:
-  * Libsecret (Linux)
-  * Keychain (MacOS)
-
-**WPF**
-
 * .NET 9
 * plain WPF
-* passwords:
-  * Windows Credential Manager
+* Fluent theme with `ThemeMode="System"` for dark/light switching
+* passwords: Windows Credential Manager
 
 ---
 
@@ -62,13 +48,13 @@ Anga (notes, bookmarks, and files) use this Core Concept, but it also applies to
 
 ## Domain Model
 
-### Kāya, the "heap"
+### Kaya, the "heap"
 
-"Kāya" means a "heap" or "collection" in Pāli. It refers to each user's timestamped pile of files. To simplify spelling, the program name is simply `Kaya`, without the diacritical mark.
+"Kaya" means a "heap" or "collection" in Pali. It refers to each user's timestamped pile of files.
 
-### Aṅga, the "part"
+### Anga, the "part"
 
-"Aṅga" means "constituent part" or "limb" in Pāli. Every timestamped record in the user's heap is one constituent part. To simplify spelling, the model is simply `Anga`, without the diacritical mark.
+"Anga" means "constituent part" or "limb" in Pali. Every timestamped record in the user's heap is one constituent part.
 
 **Anga File Types:**
 
@@ -97,9 +83,7 @@ Sync with the Rails server (default: savebutton.com) happens through its API, us
 
 Kaya relies on fat models, service objects, and thin views. Where possible, view code is kept to a minimum in favour of "backend" code.
 
-### Architecture Documentation
-
-* [`gtk/doc/arch/*.md`](./gtk/doc/arch/) contains Architectural Decision Records
+For architectural context from the GTK version (which this app ports), see the [kaya-gtk](https://github.com/lofimx/kaya-gtk) repository's `doc/arch/*.md`.
 
 ### Testing
 
@@ -107,10 +91,6 @@ Kaya relies on fat models, service objects, and thin views. Where possible, view
 * only permit about 12 system tests across the entire repository
 * unit tests should test models heavily, controllers lightly, and views not at all
 * when fixing bugs, always try to write a failing unit test first; keep the test
-
-### Linting
-
-Always run `make lint` after making changes to code or tests.
 
 ### Logging
 
@@ -128,14 +108,12 @@ Always run `make lint` after making changes to code or tests.
 - UI controllers: Log lifecycle events and user actions
 - Caught exceptions: Always include the exception object
 
-> **Tip**: Consider emoji prefixes (🟢 DEBUG, 🔵 INFO, 🟠 WARN, 🔴 ERROR) for quick visual scanning in development logs.
-
 ---
 
 ## Design
 
-* [`gtk/doc/design/`](./gtk/doc/design/) contains example icons, graphics, and design documentation for user interfaces and user experiences
-* Visual design should follow `doc/design/DESIGN.md` for each project (`gtk` and `wpf`).
+* [doc/design/](./doc/design/) contains design documentation and assets
+* Visual design should follow [doc/design/DESIGN.md](./doc/design/DESIGN.md)
 
 ---
 
@@ -154,7 +132,7 @@ When adding a new feature:
 6. Write tests - following existing patterns
 7. Update docs - If adding new patterns/conventions:
   * keep it light
-  * do not add to `gtk/doc/arch/adr-*.md` without asking
+  * do not add to `doc/arch/adr-*.md` without asking
 8. Never perform git commands
 
 ---

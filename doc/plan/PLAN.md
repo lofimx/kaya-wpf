@@ -11,7 +11,7 @@ Before creating the plan, read these documents:
 * [@README.md](../../README.md)
 * [@AGENTS.md](../../AGENTS.md)
 * [doc/design/DESIGN.md](../design/DESIGN.md)
-* [doc/arch/*.md](../../gtk/doc/arch/)
+* Architecture notes from the [kaya-gtk](https://github.com/lofimx/kaya-gtk) repo's `doc/arch/*.md` (for porting context)
 
 Then create the plan **in `doc/plan/`** and ask any clarifying questions you have. After I answer your questions to eliminate ambiguity, adjust the plan accordingly. Ask more clarifying questions, if required, and repeat the process until all your questions are answered.
 
