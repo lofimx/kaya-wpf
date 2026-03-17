@@ -5,6 +5,8 @@ LLM agents must create a Markdown plan document **in this directory** (`doc/plan
 * `2025-12-25-port-plaintext-indexing.md`
 * `2025-12-26-fix-preferences-layout-bug.md`
 * `2026-01-31-r-extract-behavior-from-controllers-to-models.md` ('r' for 'refactoring')
+* `2025-12-25-1-zap-old-indexing.md` (ordered chronologically)
+* `2025-12-25-2-add-gui-for-port-setting.md`
 
 Before creating the plan, read these documents: 
 

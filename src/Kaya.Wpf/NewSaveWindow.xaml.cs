@@ -237,31 +237,15 @@ public partial class NewSaveWindow : Window
     {
         try
         {
-            // WPF cannot natively decode SVG into BitmapImage.
-            // Use XamlReader to parse simple SVGs as XAML Viewbox content.
-            // For complex SVGs this may fail, falling back to a file icon.
-            var svgContent = File.ReadAllText(filePath);
-
-            // Wrap SVG in a WebBrowser for reliable rendering
-            var webBrowser = new WebBrowser
+            var bitmap = SvgRenderer.RenderToBitmap(filePath, 256);
+            if (bitmap is null)
             {
-                MaxWidth = 256,
-                MaxHeight = 256,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            webBrowser.NavigateToString(
-                $"<html><body style='margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:transparent'>{svgContent}</body></html>");
+                FilePreviewIcon.Visibility = Visibility.Visible;
+                FilePreviewIcon.Text = "\U0001F5BC";
+                return;
+            }
 
-            FilePreviewIcon.Visibility = Visibility.Collapsed;
-
-            var existingBrowser = FilePreviewContent.Children.OfType<WebBrowser>().FirstOrDefault();
-            if (existingBrowser != null)
-                FilePreviewContent.Children.Remove(existingBrowser);
-            var existingImage = FilePreviewContent.Children.OfType<Image>().FirstOrDefault();
-            if (existingImage != null)
-                FilePreviewContent.Children.Remove(existingImage);
-
-            FilePreviewContent.Children.Insert(0, webBrowser);
+            InsertImagePreview(bitmap);
         }
         catch (Exception e)
         {

@@ -9,6 +9,10 @@
     <Resource Include="app.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Svg.Skia" Version="3.6.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>

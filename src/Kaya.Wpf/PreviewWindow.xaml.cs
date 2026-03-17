@@ -110,9 +110,15 @@ public partial class PreviewWindow : Window
     {
         var filename = new Filename(_result.Filename);
 
+        if (filename.Extension == "svg")
+        {
+            SetupSvgContent();
+            return;
+        }
+
         if (filename.IsImage())
         {
-            SetupImageContent();
+            SetupRasterImageContent();
             return;
         }
 
@@ -126,7 +132,7 @@ public partial class PreviewWindow : Window
         FileTypeLabel.Text = _result.DisplayTitle;
     }
 
-    private void SetupImageContent()
+    private void SetupRasterImageContent()
     {
         ImagePanel.Visibility = Visibility.Visible;
         try
@@ -146,6 +152,28 @@ public partial class PreviewWindow : Window
             FilePanel.Visibility = Visibility.Visible;
             FileTypeLabel.Text = _result.DisplayTitle;
         }
+    }
+
+    private void SetupSvgContent()
+    {
+        try
+        {
+            var filePath = _fileService.GetAngaFilePath(_result.Filename);
+            var bitmap = SvgRenderer.RenderToBitmap(filePath);
+            if (bitmap is not null)
+            {
+                ImagePanel.Visibility = Visibility.Visible;
+                ImagePreview.Source = bitmap;
+                return;
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Instance.Error($"🔴 ERROR PreviewWindow failed to render SVG: {e.Message}");
+        }
+
+        FilePanel.Visibility = Visibility.Visible;
+        FileTypeLabel.Text = _result.DisplayTitle;
     }
 
     private void SetupShare()

@@ -74,3 +74,7 @@ Using GitHub Actions, create a workflow similar to the `kaya-gtk` GHA build work
 ### Create a Release script
 
 Similar to the `bin/release.rb` script available in `kaya-gtk`, create a release script for `kaya-wpf`. There is no `ruby` available in Git Bash on Windows, and it might be better not to mix Git Bash and MSYS2, so perhaps it's better to port the Ruby script to PowerShell? The PowerShell shell has git available, and the script is fairly simple. Alternative suggestions welcome; we want to reduce maintenance burden and duplicated code (especially in multiple languages) but we've already ported TypeScript GTK to C#/WPF. This is fairly minor by comparison.
+
+### BUG: SVGs not rendering
+
+On the "New Save" screen, SVGs attempt to render but show nothing. On the Preview screen, only the representative icon shows but no SVG is rendered.
