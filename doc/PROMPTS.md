@@ -25,3 +25,11 @@ Read [@PLAN.md](file:///C:/Users/steven/work/kaya-wpf/doc/plan/PLAN.md). Ask any
 The GTK portion of the [@kaya-gtk-wpf](file:///C:/Users/steven/work/kaya-gtk-wpf) repository has been extracted to [@kaya-gtk](file:///C:/Users/steven/work/kaya-gtk). We need to do the same thing for the WPF portion in [@wpf](file:///C:/Users/steven/work/kaya-gtk-wpf/wpf). Bring that portion of the `kaya-gtk-wpf` codebase into the root of this repository. Bring along the README, build scripts, and so on.
 
 This repository will remain **completely and only a port of the GTK app** and, as such, doesn't require the full prompt history or plans from the GTK app. Instead, prompts for the WPF portion (as you will see in the old `kaya-gtk-wpf` repo) are about how to port features from the GTK version and tweak the WPF app behaviour to ensure there are no bugs.
+
+## Port all new behaviour from kaya-gtk to WPF
+
+The `kaya-wpf` sister repo, [@kaya-gtk](file:///C:/Users/steven/work/kaya-gtk), has drifted from `kaya-gtk-wpf`, which this repo was extracted from. Some new features have been added and bugs have been fixed in `kaya-gtk`.
+
+Review `kaya-gtk` to see what new features, bug fixes, refactoring, UI tweaks, and other changes have occurred since the WPF port was last in sync with the GTK app. Read through the [@PROMPTS.md](file:///C:/Users/steven/work/kaya-gtk/doc/PROMPTS.md) and [@plan/*.md](file:///C:/Users/steven/work/kaya-gtk/doc/plan/) in the `kaya-gtk` repo to see what changes were made and how they were planned.
+
+Read the `kaya-gtk` code to understand it, then bring this repo up to feature parity. Some smaller changes may not have a prompt or plan in the `kaya-gtk` repo for you to reuse.
