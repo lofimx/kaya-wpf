@@ -20,4 +20,8 @@ Write a utility .NET console app but keep it in `bin/`, rather than throwing it 
 
 ## Move WPF port into its own repository
 
-The GTK portion of the old `kaya-gtk-wpf` repository has been extracted to [kaya-gtk](https://github.com/lofimx/kaya-gtk). The WPF portion has been extracted here, to this `kaya-wpf` repository.
+Read [@PLAN.md](file:///C:/Users/steven/work/kaya-wpf/doc/plan/PLAN.md). Ask any questions you have before implementing.
+
+The GTK portion of the [@kaya-gtk-wpf](file:///C:/Users/steven/work/kaya-gtk-wpf) repository has been extracted to [@kaya-gtk](file:///C:/Users/steven/work/kaya-gtk). We need to do the same thing for the WPF portion in [@wpf](file:///C:/Users/steven/work/kaya-gtk-wpf/wpf). Bring that portion of the `kaya-gtk-wpf` codebase into the root of this repository. Bring along the README, build scripts, and so on.
+
+This repository will remain **completely and only a port of the GTK app** and, as such, doesn't require the full prompt history or plans from the GTK app. Instead, prompts for the WPF portion (as you will see in the old `kaya-gtk-wpf` repo) are about how to port features from the GTK version and tweak the WPF app behaviour to ensure there are no bugs.
