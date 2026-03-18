@@ -43,7 +43,7 @@ jobs:
             -o publish
 
       - name: Install WiX v5
-        run: dotnet tool install --global wix
+        run: dotnet tool install --global wix --version 5.0.2
 
       - name: Determine version
         id: version
@@ -54,9 +54,6 @@ jobs:
           else
             echo "version=0.0.0-nightly" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Add WiX UI extension
-        run: wix extension add WixToolset.UI.wixext
 
       - name: Build MSI
         run: |
