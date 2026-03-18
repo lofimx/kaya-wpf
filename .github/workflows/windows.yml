@@ -55,6 +55,9 @@ jobs:
             echo "version=0.0.0-nightly" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Add WiX UI extension
+        run: wix extension add WixToolset.UI.wixext
+
       - name: Build MSI
         run: |
           wix build packaging/SaveButton.wxs `
