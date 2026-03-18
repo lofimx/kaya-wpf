@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/steven/work/kaya-wpf -type f \\\\\\(-iname *.wxs -o -iname *.wixproj -o -iname *.wxl -o -iname *wix* \\\\\\))",
+      "Bash(find /c/Users/steven/work/kaya-wpf -type f -name *.yml -o -name *.yaml)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}
